@@ -24,9 +24,9 @@ routes.get('/peliculasLimitadas', async (req, res) => {
 routes.get('/peliculasOrdenadasPorAnio', async (req, res) => {
     try {
         const peliculas = await peliculasModel.find().sort({ año_lanzamiento: 1 });
-        res.status(200).json(peliculas);
+        res.status(201).json(peliculas);
     } catch (error) {
-        res.status(500).json({ mensaje: error.message });
+        res.status(400).json({ mensaje: error.message });
     }
 });
 
@@ -66,11 +66,28 @@ routes.get('/peliculasPorCantidadGenero', async (req, res) => {
         const peliculas = await peliculasModel.aggregate([
             { $group: { _id: "$genero", total: { $sum: 1 } } }
         ]);
-        res.status(200).json(peliculas);
+        res.status(201).json(peliculas);
     } catch (error) {
-        res.status(500).json({ mensaje: error.message });
+        res.status(400).json({ mensaje: error.message });
     }
 });
+
+routes.post('/listaPeliculasPorUnActorEspecifico', async (req, res) => {
+    try {
+        const peliculas = await peliculasModel.find({ actores: req.body.actor })
+        .then(peliculas => {
+            res.status(201).json(peliculas);
+        })
+        .catch(err => {
+            console.error(err);
+        });
+    } catch (error) {
+        res.status(400).json({ mensaje: error.message });
+    }
+});
+
+
+
 
 routes.post('/crearPeliculas',async (req,res)=>{
     const peliculas = new peliculasModel({
@@ -115,7 +132,5 @@ routes.delete('/eliminarPelicula/:id',async (req,res)=>{
         res.status(400).json({mensaje : error.message});
     }
 });
-////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 module.exports = routes;
