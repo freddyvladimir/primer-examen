@@ -12,6 +12,24 @@ routes.get('/listaPeliculas',async (req,res)=>{
     }
 });
 
+routes.get('/peliculasLimitadas', async (req, res) => {
+    try {
+        const peliculas = await peliculasModel.find().limit(10);
+        res.status(201).json(peliculas);
+    } catch (error) {
+        res.status(400).json({ mensaje: error.message });
+    }
+});
+
+routes.get('/peliculasOrdenadasPorAnio', async (req, res) => {
+    try {
+        const peliculas = await peliculasModel.find().sort({ año_lanzamiento: 1 });
+        res.status(200).json(peliculas);
+    } catch (error) {
+        res.status(500).json({ mensaje: error.message });
+    }
+});
+
 routes.get('/listaPelicula/:id',async (req,res)=>{
     try {
         const pelicula = await peliculasModel.findById(req.params.id);
@@ -40,6 +58,17 @@ routes.get('/peliculasLanzadasDespuesDe/:anio', async (req, res) => {
         res.status(201).json(peliculas);
     } catch (error) {
         res.status(400).json({ mensaje: error.message });
+    }
+});
+
+routes.get('/peliculasPorCantidadGenero', async (req, res) => {
+    try {
+        const peliculas = await peliculasModel.aggregate([
+            { $group: { _id: "$genero", total: { $sum: 1 } } }
+        ]);
+        res.status(200).json(peliculas);
+    } catch (error) {
+        res.status(500).json({ mensaje: error.message });
     }
 });
 
