@@ -2,6 +2,8 @@ const express = require('express');
 const routes = express.Router();
 
 const peliculasModel = require('../models/Peliculas');
+const usuarioModel = require('../models/Usuario');
+const calificacionModel = require('../models/Calificacion');
 
 routes.get('/listaPeliculas',async (req,res)=>{
     try {
@@ -23,7 +25,7 @@ routes.get('/peliculasLimitadas', async (req, res) => {
 
 routes.get('/peliculasOrdenadasPorAnio', async (req, res) => {
     try {
-        const peliculas = await peliculasModel.find().sort({ año_lanzamiento: 1 });
+        const peliculas = await peliculasModel.find().sort({ anio_lanzamiento: 1 });
         res.status(201).json(peliculas);
     } catch (error) {
         res.status(400).json({ mensaje: error.message });
@@ -54,7 +56,7 @@ routes.get('/peliculasPorGenero/:genero', async (req, res) => {
 
 routes.get('/peliculasLanzadasDespuesDe/:anio', async (req, res) => {
     try {
-        const peliculas = await peliculasModel.find({ año_lanzamiento: { $gt: req.params.anio } });
+        const peliculas = await peliculasModel.find({ anio_lanzamiento: { $gt: req.params.anio } });
         res.status(201).json(peliculas);
     } catch (error) {
         res.status(400).json({ mensaje: error.message });
@@ -95,7 +97,7 @@ routes.post('/crearPeliculas',async (req,res)=>{
         genero: req.body.genero,
         director: req.body.director,
         actores: req.body.actores,
-        año_lanzamiento: req.body.año_lanzamiento,
+        anio_lanzamiento: req.body.anio_lanzamiento,
         sinopsis: req.body.sinopsis,
         calificaciones: req.body.calificaciones
     });
@@ -132,5 +134,81 @@ routes.delete('/eliminarPelicula/:id',async (req,res)=>{
         res.status(400).json({mensaje : error.message});
     }
 });
+
+routes.get('/peliculasCalificadasPorUsuario/:usuarioId', async (req, res) =>{
+    const {usuarioId} = req.params;    
+    try{
+        const usuario = await usuarioModel.findById(usuarioId);
+        if (!usuario)
+            return res.status(404).json({mensaje: 'usuario no encontrado'});
+        const peliculas = await peliculasModel.find({ 'calificaciones.usuario_id' : usuarioId }).populate('calificaciones.usuario_id');
+        res.json(peliculas);
+    } catch(error){
+        res.status(500).json({ mensaje :  error.message})
+    }
+})
+
+
+
+routes.get('/cantidadDecalificacionesPorPelicula', async (req, res) => {
+    try {   
+        const usuarios = await usuarioModel.find();
+        const reporte = await Promise.all(
+            usuarios.map( async ( mapUsuario ) => {
+                const peliculas = await peliculasModel.find({ 'calificaciones.usuario_id' : mapUsuario._id});
+                const calificaciones = await calificacionModel.find({ usuario_id : mapUsuario._id});
+                
+                const suma = calificaciones.reduce((sum, calificaciones) => sum + calificaciones.calificacion , 0);
+
+                return {
+                    peliculas: peliculas.map( r => ( {
+                        _id: r._id,
+                        titulo: r.titulo,
+                        genero: r.genero
+                    })),
+                    suma,
+                    calificaciones:calificaciones.map( c => ( {
+                        fecha: c.fecha
+                    })),
+                }
+            } )
+        )
+        res.json(reporte);
+    } catch (error){
+        res.status(500).json({ mensaje :  error.message})
+    }
+})
+
+
+routes.get('/listarPeliculasCalificaciones', async (req, res) => {
+    try {   
+        const usuarios = await usuarioModel.find();
+        const reporte = await Promise.all(
+            usuarios.map( async ( mapUsuario ) => {
+                const peliculas = await peliculasModel.find({ 'calificaciones.usuario_id' : mapUsuario._id});
+                const calificaciones = await calificacionModel.find({ usuario_id : mapUsuario._id});
+                return {
+                    usuario: {
+                        _id: mapUsuario._id,
+                        nombre: mapUsuario.nombre
+                    },
+                    peliculas: peliculas.map( r => ( {
+                        _id: r._id,
+                        titulo: r.titulo,
+                        genero: r.genero
+                    })),
+                    calificaciones:calificaciones.map( c => ( {
+                        _id: c._id,
+                        calificacion: c.calificacion,
+                        fecha: c.fecha
+                    })),
+                }
+            } )
+        )
+        res.status(201).json(reporte);
+    } catch (error){
+        res.status(500).json({ mensaje :  error.message})
+    }
+})
 
 module.exports = routes;

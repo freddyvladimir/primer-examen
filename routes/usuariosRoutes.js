@@ -3,6 +3,7 @@ const routes = express.Router();
 
 const usuarioModel = require('../models/Usuario');
 
+
 routes.get('/listaUsuarios',async (req,res)=>{
     try {
         const usuario = await usuarioModel.find();
@@ -53,5 +54,6 @@ routes.delete('/eliminarUsuario/:id',async (req,res)=>{
         res.status(400).json({mensaje : error.message});
     }
 });
+
 
 module.exports = routes;
